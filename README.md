@@ -27,3 +27,8 @@ uvicorn app.main:app --reload
 - `GET /health`
 - `GET /api/projects/{project_id}/scenes/{scene_id}/video`
 - `GET /api/projects/{project_id}/final-video`
+
+## 계속 같은 화면/오류가 보일 때
+- 서버를 완전히 재시작한 뒤 접속하세요.
+- 브라우저에서 `Ctrl + Shift + R`(강력 새로고침)을 하세요.
+- `/health` 응답의 `build` 값이 `2026.04.14-2` 인지 확인하세요.

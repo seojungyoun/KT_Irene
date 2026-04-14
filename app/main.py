@@ -26,6 +26,7 @@ DATA_DIR = BASE_DIR / "data" / "projects"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 PROJECTS: dict[str, Project] = {}
+APP_BUILD = "2026.04.14-2"
 
 app = FastAPI(title="KT Irene Studio", version="0.2.0")
 app.add_middleware(
@@ -39,9 +40,19 @@ app.mount("/static", StaticFiles(directory=BASE_DIR / "app" / "static"), name="s
 app.mount("/data", StaticFiles(directory=BASE_DIR / "data"), name="data")
 
 
+@app.middleware("http")
+async def disable_cache_for_ui(request, call_next):
+    response = await call_next(request)
+    if request.url.path == "/" or request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
+
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "build": APP_BUILD}
 
 
 @app.get("/")

@@ -26,6 +26,7 @@ body {
 
 .left-tools { display: flex; gap: 8px; }
 .right-tools { font-weight: 700; color: var(--kt-red); }
+.build-tag { color: #667084; font-size: 12px; font-weight: 500; margin-left: 6px; }
 
 .tool {
   border: 1px solid var(--line);
