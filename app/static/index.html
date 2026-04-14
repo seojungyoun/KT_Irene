@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KT Irene Studio</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>KT Irene Studio (MVP)</h1>
+      <section class="panel">
+        <h2>1) 입력 및 설정</h2>
+        <label>프로젝트 제목 <input id="title" value="오전 뉴스 브리핑" /></label>
+        <label>템플릿
+          <select id="template">
+            <option>A</option><option>B</option><option>C</option>
+            <option>D</option><option>E</option><option>F</option>
+          </select>
+        </label>
+        <label>씬 목표 길이(초)
+          <input id="target_sec" type="number" min="5" max="10" value="8" />
+        </label>
+        <label>대본</label>
+        <textarea id="script" rows="8" placeholder="뉴스 대본을 입력하세요"></textarea>
+        <button id="createBtn">프로젝트 생성 + 씬 분할</button>
+      </section>
+
+      <section class="panel">
+        <h2>2) 씬 생성/수정</h2>
+        <div id="projectInfo"></div>
+        <div id="sceneList"></div>
+        <button id="renderBtn" disabled>최종 렌더링</button>
+      </section>
+
+      <section class="panel">
+        <h2>3) 최종 결과</h2>
+        <div id="finalResult">아직 렌더링 결과가 없습니다.</div>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
