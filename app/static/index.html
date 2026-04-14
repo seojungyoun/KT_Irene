@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KT Irene Studio</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">KT Irene Studio</div>
+      <div class="toolbar">
+        <button id="createBtn" class="primary">새 프로젝트 생성</button>
+        <button id="generateAllBtn">전체 씬 생성 + 최종 렌더</button>
+        <button id="renderBtn">최종 렌더만 실행</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="left-panel card">
+        <h2>프로젝트 설정</h2>
+        <label>제목 <input id="title" value="오전 뉴스 브리핑" /></label>
+        <label>레이아웃 템플릿
+          <select id="template">
+            <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option>
+          </select>
+        </label>
+        <div class="grid-2">
+          <label>배경
+            <select id="background">
+              <option value="kt_studio">KT Studio</option>
+              <option value="white_room">White Room</option>
+              <option value="red_gradient">Red Gradient</option>
+            </select>
+          </label>
+          <label>씬 길이(초)
+            <input id="target_sec" type="number" min="5" max="10" value="8" />
+          </label>
+        </div>
+        <div class="grid-2">
+          <label>의상
+            <select id="outfit">
+              <option value="white_mockneck">White Mockneck</option>
+              <option value="white_halter">White Halter</option>
+            </select>
+          </label>
+          <label>헤어
+            <select id="hair">
+              <option value="long_s_wave_6_4">Long S-wave 6:4</option>
+              <option value="straight_6_4">Straight 6:4</option>
+            </select>
+          </label>
+        </div>
+        <div class="grid-2">
+          <label>로고 위치
+            <select id="logo_position">
+              <option value="top-right">Top Right</option>
+              <option value="top-left">Top Left</option>
+              <option value="bottom-right">Bottom Right</option>
+              <option value="bottom-left">Bottom Left</option>
+            </select>
+          </label>
+          <label>로고 크기(%)
+            <input id="logo_scale" type="number" min="5" max="30" value="12" />
+          </label>
+        </div>
+        <label>자막 폰트 <input id="subtitle_font" value="Pretendard" /></label>
+      </aside>
+
+      <section class="center-panel card">
+        <h2>대본 입력</h2>
+        <textarea id="script" rows="10" placeholder="뉴스 대본을 입력하세요"></textarea>
+        <p class="hint">씬 권장 길이(5~10초)에 맞춰 자동 분할됩니다.</p>
+
+        <div id="projectInfo" class="status-box">프로젝트를 먼저 생성해주세요.</div>
+        <div id="sceneList"></div>
+      </section>
+
+      <aside class="right-panel card">
+        <h2>결과/미리보기</h2>
+        <div id="finalResult" class="preview-box">아직 결과가 없습니다.</div>
+      </aside>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
