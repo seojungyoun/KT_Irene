@@ -56,3 +56,20 @@ git commit -m "Resolve README merge conflict"
 ```
 
 충돌 마커는 최종 파일에 절대 남기지 않습니다.
+
+## 여러 파일 충돌 한 번에 해결하기
+아래 스크립트는 현재 브랜치 기준으로 충돌 파일을 점검/해결할 때 사용합니다.
+
+```bash
+# 충돌 마커 점검
+./scripts/check_conflicts.sh
+
+# 현재 브랜치(ours) 기준으로 충돌 해결 + add
+./scripts/resolve_conflicts_ours.sh
+```
+
+그 다음:
+```bash
+git status
+git commit -m "Resolve merge conflicts"
+```
