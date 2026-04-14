@@ -1,0 +1,28 @@
+{
+  "project_id": "5fcfb0ca-0f90-45a6-8f6d-8421b1b50496",
+  "title": "오전 뉴스 브리핑",
+  "script": "안녕하세요, 아이린입니다.",
+  "template": "C",
+  "background": "studio",
+  "outfit": "white_mockneck",
+  "hair": "long_s_wave_6_4",
+  "target_scene_sec": 8,
+  "status": "generating",
+  "created_at": "2026-04-14T05:16:43.152552+00:00",
+  "updated_at": "2026-04-14T05:16:50.617054+00:00",
+  "scenes": [
+    {
+      "scene_id": "7d7396dd-c4ec-439c-a181-00e0f07e9d9f",
+      "order_index": 0,
+      "script_text": "안녕하세요, 아이린입니다.",
+      "recommended_char_limit": 56,
+      "duration_sec": 2.0,
+      "version": 1,
+      "status": "generated",
+      "tts_audio_url": "/data\\projects\\5fcfb0ca-0f90-45a6-8f6d-8421b1b50496\\scene_000_v1\\tts.wav",
+      "video_url": "/data\\projects\\5fcfb0ca-0f90-45a6-8f6d-8421b1b50496\\scene_000_v1\\scene.mp4",
+      "last_frame_url": "/data\\projects\\5fcfb0ca-0f90-45a6-8f6d-8421b1b50496\\scene_000_v1\\last_frame.png"
+    }
+  ],
+  "final_video_url": null
+}
