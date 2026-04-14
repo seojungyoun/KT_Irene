@@ -8,80 +8,57 @@
   </head>
   <body>
     <header class="topbar">
-      <div class="brand">KT Irene Studio</div>
-      <div class="toolbar">
-        <button id="createBtn" class="primary">새 프로젝트 생성</button>
-        <button id="generateAllBtn">전체 씬 생성 + 최종 렌더</button>
-        <button id="renderBtn">최종 렌더만 실행</button>
+      <div class="left-tools">
+        <button id="createBtn" class="tool primary">새로 만들기</button>
+        <button id="generateAllBtn" class="tool">영상 추가하기</button>
+        <button id="renderBtn" class="tool">내보내기 렌더</button>
       </div>
+      <div class="right-tools">KT Irene Studio</div>
     </header>
 
-    <main class="layout">
-      <aside class="left-panel card">
-        <h2>프로젝트 설정</h2>
-        <label>제목 <input id="title" value="오전 뉴스 브리핑" /></label>
-        <label>레이아웃 템플릿
-          <select id="template">
-            <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option>
-          </select>
-        </label>
-        <div class="grid-2">
-          <label>배경
-            <select id="background">
-              <option value="kt_studio">KT Studio</option>
-              <option value="white_room">White Room</option>
-              <option value="red_gradient">Red Gradient</option>
-            </select>
-          </label>
-          <label>씬 길이(초)
-            <input id="target_sec" type="number" min="5" max="10" value="8" />
-          </label>
-        </div>
-        <div class="grid-2">
-          <label>의상
-            <select id="outfit">
-              <option value="white_mockneck">White Mockneck</option>
-              <option value="white_halter">White Halter</option>
-            </select>
-          </label>
-          <label>헤어
-            <select id="hair">
-              <option value="long_s_wave_6_4">Long S-wave 6:4</option>
-              <option value="straight_6_4">Straight 6:4</option>
-            </select>
-          </label>
-        </div>
-        <div class="grid-2">
-          <label>로고 위치
-            <select id="logo_position">
-              <option value="top-right">Top Right</option>
-              <option value="top-left">Top Left</option>
-              <option value="bottom-right">Bottom Right</option>
-              <option value="bottom-left">Bottom Left</option>
-            </select>
-          </label>
-          <label>로고 크기(%)
-            <input id="logo_scale" type="number" min="5" max="30" value="12" />
-          </label>
-        </div>
-        <label>자막 폰트 <input id="subtitle_font" value="Pretendard" /></label>
+    <main class="workspace">
+      <aside class="preview-pane">
+        <div class="monitor" id="monitor">미리보기 화면</div>
+        <div class="timeline">클립 타임라인</div>
       </aside>
 
-      <section class="center-panel card">
-        <h2>대본 입력</h2>
-        <textarea id="script" rows="10" placeholder="뉴스 대본을 입력하세요"></textarea>
-        <p class="hint">씬 권장 길이(5~10초)에 맞춰 자동 분할됩니다.</p>
+      <section class="editor-pane">
+        <div class="editor-card">
+          <h2>프로젝트 설정</h2>
+          <div class="row-3">
+            <label>제목 <input id="title" value="오전 뉴스 브리핑" /></label>
+            <label>템플릿
+              <select id="template"><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option></select>
+            </label>
+            <label>씬 길이(초) <input id="target_sec" type="number" min="5" max="10" value="8" /></label>
+          </div>
+          <div class="row-4">
+            <label>배경
+              <select id="background"><option value="kt_studio">KT Studio</option><option value="white_room">White Room</option><option value="red_gradient">Red Gradient</option></select>
+            </label>
+            <label>의상
+              <select id="outfit"><option value="white_mockneck">White Mockneck</option><option value="white_halter">White Halter</option></select>
+            </label>
+            <label>헤어
+              <select id="hair"><option value="long_s_wave_6_4">Long S-wave 6:4</option><option value="straight_6_4">Straight 6:4</option></select>
+            </label>
+            <label>로고 위치
+              <select id="logo_position"><option value="top-right">Top Right</option><option value="top-left">Top Left</option><option value="bottom-right">Bottom Right</option><option value="bottom-left">Bottom Left</option></select>
+            </label>
+          </div>
+          <label>대본</label>
+          <textarea id="script" rows="6" placeholder="텍스트를 입력하시면 AI 목소리가 읽어드립니다"></textarea>
+          <div id="projectInfo" class="project-info">프로젝트를 생성해 주세요.</div>
+        </div>
 
-        <div id="projectInfo" class="status-box">프로젝트를 먼저 생성해주세요.</div>
-        <div id="sceneList"></div>
+        <div class="editor-card">
+          <h2>씬 편집</h2>
+          <div id="sceneList"></div>
+        </div>
       </section>
-
-      <aside class="right-panel card">
-        <h2>결과/미리보기</h2>
-        <div id="finalResult" class="preview-box">아직 결과가 없습니다.</div>
-      </aside>
     </main>
 
+    <div id="finalResult" class="result-toast">최종 결과 없음</div>
     <script src="/static/app.js"></script>
   </body>
 </html>

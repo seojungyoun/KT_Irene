@@ -39,6 +39,11 @@ app.mount("/static", StaticFiles(directory=BASE_DIR / "app" / "static"), name="s
 app.mount("/data", StaticFiles(directory=BASE_DIR / "data"), name="data")
 
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(BASE_DIR / "app" / "static" / "index.html")

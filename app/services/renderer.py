@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 TEMPLATE_LABEL = {
@@ -10,6 +11,25 @@ TEMPLATE_LABEL = {
     "E": "Ticker",
     "F": "Dual Box",
 }
+
+
+def _concat_with_ffmpeg(output: Path, inputs: list[Path]) -> None:
+    list_file = output.parent / "concat_list.txt"
+    list_file.write_text("\n".join([f"file '{p.resolve()}'" for p in inputs]), encoding="utf-8")
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        str(list_file),
+        "-c",
+        "copy",
+        str(output),
+    ]
+    subprocess.run(cmd, check=True, capture_output=True, text=True)
 
 
 def render_final_video(
@@ -41,13 +61,16 @@ def render_final_video(
         for clip in clips:
             clip.close()
         final.close()
-    except Exception as exc:
-        output.write_text(
-            "Final render placeholder\n"
-            f"template: {TEMPLATE_LABEL.get(template, template)}\n"
-            f"moviepy concat failed: {exc}\n"
-            f"scenes: {[str(p.name) for p in valid_scene_paths]}\n",
-            encoding="utf-8",
-        )
+    except Exception:
+        try:
+            _concat_with_ffmpeg(output, valid_scene_paths)
+        except Exception as exc:
+            output.write_text(
+                "Final render placeholder\n"
+                f"template: {TEMPLATE_LABEL.get(template, template)}\n"
+                f"render failed: {exc}\n"
+                f"scenes: {[str(p.name) for p in valid_scene_paths]}\n",
+                encoding="utf-8",
+            )
 
     return output
