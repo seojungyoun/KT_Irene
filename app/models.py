@@ -18,6 +18,12 @@ class Scene:
     version: int = 1
     status: str = "draft"
     pronunciation_dict: dict[str, str] = field(default_factory=dict)
+
+    subtitle_path: str | None = None
+    tts_audio_path: str | None = None
+    video_path: str | None = None
+    last_frame_path: str | None = None
+
     subtitle_url: str | None = None
     tts_audio_url: str | None = None
     video_url: str | None = None
@@ -44,6 +50,7 @@ class Project:
     created_at: str = field(default_factory=utc_now_iso)
     updated_at: str = field(default_factory=utc_now_iso)
     scenes: list[Scene] = field(default_factory=list)
+    final_video_path: str | None = None
     final_video_url: str | None = None
 
     def touch(self) -> None:

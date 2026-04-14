@@ -64,6 +64,12 @@ def _get_project(project_id: str) -> Project:
     return project
 
 
+def _resolve_rel_path(rel_path: str | None) -> Path | None:
+    if not rel_path:
+        return None
+    return BASE_DIR / rel_path
+
+
 def _build_scenes(script: str, target_scene_sec: int) -> list[Scene]:
     max_chars = recommended_limit_by_seconds(target_scene_sec)
     chunks = split_script(script, max_chars=max_chars)
@@ -156,10 +162,14 @@ def _generate_scene_internal(project: Project, scene: Scene, pronunciation_dict:
     )
     scene.pronunciation_dict = pronunciation_dict
     scene.duration_sec = duration
-    scene.tts_audio_url = "/" + str(wav_path.relative_to(BASE_DIR))
-    scene.subtitle_url = "/" + str(subtitle_path.relative_to(BASE_DIR))
-    scene.video_url = "/" + str(video_path.relative_to(BASE_DIR))
-    scene.last_frame_url = "/" + str(last_frame.relative_to(BASE_DIR))
+    scene.tts_audio_path = str(wav_path.relative_to(BASE_DIR))
+    scene.subtitle_path = str(subtitle_path.relative_to(BASE_DIR))
+    scene.video_path = str(video_path.relative_to(BASE_DIR))
+    scene.last_frame_path = str(last_frame.relative_to(BASE_DIR))
+    scene.tts_audio_url = f"/api/projects/{project.project_id}/scenes/{scene.scene_id}/audio"
+    scene.subtitle_url = f"/api/projects/{project.project_id}/scenes/{scene.scene_id}/subtitle"
+    scene.video_url = f"/api/projects/{project.project_id}/scenes/{scene.scene_id}/video"
+    scene.last_frame_url = f"/api/projects/{project.project_id}/scenes/{scene.scene_id}/last-frame"
     scene.status = "generated"
 
 
@@ -184,13 +194,14 @@ def generate_all(project_id: str):
     for scene in sorted(project.scenes, key=lambda x: x.order_index):
         _generate_scene_internal(project, scene, scene.pronunciation_dict)
 
-    scene_video_paths = [BASE_DIR / s.video_url.lstrip("/") for s in project.scenes if s.video_url]
+    scene_video_paths = [BASE_DIR / s.video_path for s in project.scenes if s.video_path]
     output_path = render_final_video(
         DATA_DIR / project.project_id,
         scene_video_paths,
         template=project.template,
     )
-    project.final_video_url = "/" + str(output_path.relative_to(BASE_DIR))
+    project.final_video_path = str(output_path.relative_to(BASE_DIR))
+    project.final_video_url = f"/api/projects/{project.project_id}/final-video"
     project.status = "rendered"
     project.updated_at = utc_now_iso()
     _save_project(project)
@@ -203,14 +214,16 @@ def render_final(project_id: str):
     scene_video_paths = []
     for scene in sorted(project.scenes, key=lambda s: s.order_index):
         if scene.video_url:
-            scene_video_paths.append(BASE_DIR / scene.video_url.lstrip("/"))
+            if scene.video_path:
+                scene_video_paths.append(BASE_DIR / scene.video_path)
 
     output_path = render_final_video(
         DATA_DIR / project.project_id,
         scene_video_paths,
         template=project.template,
     )
-    project.final_video_url = "/" + str(output_path.relative_to(BASE_DIR))
+    project.final_video_path = str(output_path.relative_to(BASE_DIR))
+    project.final_video_url = f"/api/projects/{project.project_id}/final-video"
     project.status = "rendered"
     project.updated_at = utc_now_iso()
     _save_project(project)
@@ -221,3 +234,59 @@ def render_final(project_id: str):
 def get_project(project_id: str):
     project = _get_project(project_id)
     return ProjectResponse(**project.to_dict())
+
+
+def _get_scene(project: Project, scene_id: str) -> Scene:
+    for scene in project.scenes:
+        if scene.scene_id == scene_id:
+            return scene
+    raise HTTPException(status_code=404, detail="Scene not found")
+
+
+@app.get("/api/projects/{project_id}/scenes/{scene_id}/video")
+def get_scene_video(project_id: str, scene_id: str):
+    project = _get_project(project_id)
+    scene = _get_scene(project, scene_id)
+    path = _resolve_rel_path(scene.video_path)
+    if not path or not path.exists():
+        raise HTTPException(status_code=404, detail="Scene video not found")
+    return FileResponse(path)
+
+
+@app.get("/api/projects/{project_id}/scenes/{scene_id}/audio")
+def get_scene_audio(project_id: str, scene_id: str):
+    project = _get_project(project_id)
+    scene = _get_scene(project, scene_id)
+    path = _resolve_rel_path(scene.tts_audio_path)
+    if not path or not path.exists():
+        raise HTTPException(status_code=404, detail="Scene audio not found")
+    return FileResponse(path, media_type="audio/wav")
+
+
+@app.get("/api/projects/{project_id}/scenes/{scene_id}/subtitle")
+def get_scene_subtitle(project_id: str, scene_id: str):
+    project = _get_project(project_id)
+    scene = _get_scene(project, scene_id)
+    path = _resolve_rel_path(scene.subtitle_path)
+    if not path or not path.exists():
+        raise HTTPException(status_code=404, detail="Scene subtitle not found")
+    return FileResponse(path, media_type="text/plain")
+
+
+@app.get("/api/projects/{project_id}/scenes/{scene_id}/last-frame")
+def get_scene_last_frame(project_id: str, scene_id: str):
+    project = _get_project(project_id)
+    scene = _get_scene(project, scene_id)
+    path = _resolve_rel_path(scene.last_frame_path)
+    if not path or not path.exists():
+        raise HTTPException(status_code=404, detail="Scene last frame not found")
+    return FileResponse(path)
+
+
+@app.get("/api/projects/{project_id}/final-video")
+def get_final_video(project_id: str):
+    project = _get_project(project_id)
+    path = _resolve_rel_path(project.final_video_path)
+    if not path or not path.exists():
+        raise HTTPException(status_code=404, detail="Final video not found")
+    return FileResponse(path)
