@@ -17,6 +17,14 @@ class Scene:
     duration_sec: float = 0.0
     version: int = 1
     status: str = "draft"
+    pronunciation_dict: dict[str, str] = field(default_factory=dict)
+
+    subtitle_path: str | None = None
+    tts_audio_path: str | None = None
+    video_path: str | None = None
+    last_frame_path: str | None = None
+
+    subtitle_url: str | None = None
     tts_audio_url: str | None = None
     video_url: str | None = None
     last_frame_url: str | None = None
@@ -34,11 +42,15 @@ class Project:
     background: str
     outfit: str
     hair: str
-    target_scene_sec: int
+    logo_position: str = "top-right"
+    logo_scale: int = 12
+    subtitle_font: str = "Pretendard"
+    target_scene_sec: int = 8
     status: str = "draft"
     created_at: str = field(default_factory=utc_now_iso)
     updated_at: str = field(default_factory=utc_now_iso)
     scenes: list[Scene] = field(default_factory=list)
+    final_video_path: str | None = None
     final_video_url: str | None = None
 
     def touch(self) -> None:

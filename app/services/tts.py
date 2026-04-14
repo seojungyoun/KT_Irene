@@ -13,7 +13,7 @@ def apply_pronunciation(script: str, pronunciation_dict: dict[str, str]) -> str:
 
 
 def synthesize_wav(script: str, output_path: Path, sample_rate: int = 22050) -> float:
-    """Simple placeholder synthesizer.
+    """Simple deterministic placeholder synthesizer.
 
     Duration scales with script length to mimic TTS timing.
     """
@@ -27,11 +27,21 @@ def synthesize_wav(script: str, output_path: Path, sample_rate: int = 22050) -> 
         wav_file.setframerate(sample_rate)
 
         freq = 220.0
-        amp = 6000
+        amp = 5500
         frames = bytearray()
         for i in range(n_samples):
-            v = int(amp * math.sin(2.0 * math.pi * freq * (i / sample_rate)))
+            wobble = 1.0 + 0.15 * math.sin(2.0 * math.pi * 2.0 * (i / sample_rate))
+            v = int(amp * wobble * math.sin(2.0 * math.pi * freq * (i / sample_rate)))
             frames.extend(int(v).to_bytes(2, byteorder="little", signed=True))
         wav_file.writeframes(bytes(frames))
 
     return duration_sec
+
+
+def write_srt(script: str, duration_sec: float, output_path: Path) -> None:
+    h, rem = divmod(int(duration_sec), 3600)
+    m, s = divmod(rem, 60)
+    ms = int((duration_sec - int(duration_sec)) * 1000)
+    end_ts = f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+    content = f"1\n00:00:00,000 --> {end_ts}\n{script}\n"
+    output_path.write_text(content, encoding="utf-8")
