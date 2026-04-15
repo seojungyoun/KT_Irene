@@ -28,7 +28,8 @@ log = logging.getLogger(__name__)
 # ── 환경 변수 ─────────────────────────────────────────────────────────────────
 KLING_ACCESS_KEY = os.getenv("KLING_ACCESS_KEY", "")
 KLING_SECRET_KEY = os.getenv("KLING_SECRET_KEY", "")
-DID_API_KEY      = os.getenv("DID_API_KEY", "")       # D-ID API key
+DID_API_KEY      = os.getenv("DID_API_KEY", "")
+SADTALKER_PATH   = os.getenv("SADTALKER_PATH", "")    # SadTalker 클론 경로 (무료)
 
 KLING_BASE = "https://api.klingai.com"
 DID_BASE   = "https://api.d-id.com"
@@ -342,46 +343,142 @@ def _did_lip_sync(image_path: Path, audio_path: Path, output_path: Path) -> bool
 # ══════════════════════════════════════════════════════════════════════════════
 # 상태 조회
 # ══════════════════════════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
+# 엔진 3 — SadTalker (무료, 로컬 GPU)
+# ══════════════════════════════════════════════════════════════════════════════
+def _sadtalker_generate(image_path: Path, audio_path: Path, output_path: Path) -> bool:
+    """
+    SadTalker: 이미지 + 오디오 → 실제로 움직이며 말하는 영상 (무료, 로컬 실행).
+
+    필요 조건:
+      - SADTALKER_PATH 환경변수에 SadTalker 클론 경로 지정
+      - Python + PyTorch (GPU 권장, CPU도 동작하나 느림)
+      - 사전 학습 모델 다운로드 완료 (scripts/setup_sadtalker.py 실행)
+    """
+    if not SADTALKER_PATH:
+        return False
+
+    sadtalker_dir = Path(SADTALKER_PATH)
+    if not (sadtalker_dir / "inference.py").exists():
+        log.error(f"[SadTalker] inference.py 없음: {SADTALKER_PATH}")
+        log.error("[SadTalker] scripts/setup_sadtalker.py 를 먼저 실행하세요")
+        return False
+
+    result_dir = output_path.parent / "sadtalker_out"
+    result_dir.mkdir(exist_ok=True)
+
+    # 오디오를 SadTalker 권장 포맷으로 변환 (16kHz mono WAV)
+    prepped_audio = output_path.parent / "st_audio.wav"
+    subprocess.run(
+        ["ffmpeg", "-y", "-i", str(audio_path),
+         "-ar", "16000", "-ac", "1", str(prepped_audio)],
+        capture_output=True,
+    )
+    audio_in = prepped_audio if prepped_audio.exists() else audio_path
+
+    try:
+        log.info("[SadTalker] 영상 생성 시작 (GPU 없으면 수 분 소요)…")
+        subprocess.run(
+            [
+                "python", "inference.py",
+                "--driven_audio",  str(audio_in),
+                "--source_image",  str(image_path),
+                "--result_dir",    str(result_dir),
+                "--still",                 # 앵커 스타일: 고개 움직임 최소화
+                "--preprocess",    "full", # 전신 포함 처리
+                "--enhancer",      "gfpgan",  # 얼굴 화질 향상 (설치 시)
+            ],
+            check=True,
+            cwd=str(sadtalker_dir),
+            timeout=900,  # 15분 타임아웃
+        )
+
+        # 가장 최근 생성된 mp4 찾기
+        import shutil
+        videos = sorted(result_dir.glob("*.mp4"), key=lambda p: p.stat().st_mtime)
+        if not videos:
+            log.error("[SadTalker] 결과 mp4 없음")
+            return False
+        shutil.copy2(videos[-1], output_path)
+        log.info(f"[SadTalker] ✅ 완료: {output_path.name}")
+        return True
+
+    except subprocess.TimeoutExpired:
+        log.error("[SadTalker] 타임아웃 (15분 초과)")
+    except subprocess.CalledProcessError as e:
+        # GFPGAN 없을 때 enhancer 없이 재시도
+        log.warning("[SadTalker] GFPGAN 오류, enhancer 없이 재시도…")
+        try:
+            subprocess.run(
+                [
+                    "python", "inference.py",
+                    "--driven_audio",  str(audio_in),
+                    "--source_image",  str(image_path),
+                    "--result_dir",    str(result_dir),
+                    "--still",
+                    "--preprocess",    "full",
+                ],
+                check=True,
+                cwd=str(sadtalker_dir),
+                timeout=900,
+            )
+            import shutil
+            videos = sorted(result_dir.glob("*.mp4"), key=lambda p: p.stat().st_mtime)
+            if videos:
+                shutil.copy2(videos[-1], output_path)
+                log.info(f"[SadTalker] ✅ 완료 (enhancer 미적용): {output_path.name}")
+                return True
+        except Exception as e2:
+            log.error(f"[SadTalker] 재시도 실패: {e2}")
+    except Exception as e:
+        log.error(f"[SadTalker] 예외: {e}")
+    return False
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 상태 조회 / 메인 진입점
+# ══════════════════════════════════════════════════════════════════════════════
 def ai_video_status() -> dict:
-    has_kling = bool(KLING_ACCESS_KEY and KLING_SECRET_KEY)
-    has_did   = bool(DID_API_KEY)
+    has_kling      = bool(KLING_ACCESS_KEY and KLING_SECRET_KEY)
+    has_did        = bool(DID_API_KEY)
+    has_sadtalker  = bool(
+        SADTALKER_PATH and
+        Path(SADTALKER_PATH, "inference.py").exists()
+    )
 
     if has_kling:
-        engine, label = "kling", "Kling Lip-Sync"
+        engine, label, free = "kling",      "Kling Lip-Sync",  False
     elif has_did:
-        engine, label = "did",   "D-ID"
+        engine, label, free = "did",        "D-ID",             False
+    elif has_sadtalker:
+        engine, label, free = "sadtalker",  "SadTalker (로컬)", True
     else:
-        engine, label = "static", "정적 프레임 (PIL)"
+        engine, label, free = "static",     "정적 프레임 (PIL)", True
 
     return {
         "engine":     engine,
         "label":      label,
         "lip_sync":   engine != "static",
         "ai_enabled": engine != "static",
+        "free":       free,
         "kling":      has_kling,
         "did":        has_did,
+        "sadtalker":  has_sadtalker,
     }
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# 메인 진입점
-# ══════════════════════════════════════════════════════════════════════════════
 def generate_ai_video(
     image_path: Path,
     audio_path: Path,
-    duration: int,       # 참고용 (실제 길이는 audio_path에서 직접 읽음)
+    duration: int,
     output_path: Path,
 ) -> bool:
-    """
-    설정된 립싱크 엔진으로 영상 생성.
-    실패 시 False → 호출자(video.py)가 PIL 정적 프레임 fallback 처리.
-    """
+    """설정된 립싱크 엔진으로 영상 생성. 실패 시 False → PIL fallback."""
     if not image_path.exists():
         log.warning("[AI-Video] 레퍼런스 이미지 없음")
         return False
 
-    status = ai_video_status()
-    engine = status["engine"]
+    engine = ai_video_status()["engine"]
 
     if engine == "kling":
         log.info("[AI-Video] 엔진: Kling Lip-Sync")
@@ -391,5 +488,8 @@ def generate_ai_video(
         log.info("[AI-Video] 엔진: D-ID")
         return _did_lip_sync(image_path, audio_path, output_path)
 
-    # API 키 없음
+    if engine == "sadtalker":
+        log.info("[AI-Video] 엔진: SadTalker (로컬 무료)")
+        return _sadtalker_generate(image_path, audio_path, output_path)
+
     return False

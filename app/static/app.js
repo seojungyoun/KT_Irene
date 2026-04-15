@@ -436,11 +436,18 @@ async function checkAiVideoStatus() {
     if (s.ai_enabled) {
       el.textContent = `🎙 ${s.label}`;
       el.className = 'status-pill pill-green';
-      el.title = '립싱크 활성: 대본 TTS 오디오에 맞춰 아이린 입모양이 생성됩니다';
+      el.title = s.free
+        ? '무료 로컬 립싱크 활성 (GPU 권장)\nGPU 없을 시 씬당 5~15분 소요'
+        : '유료 API 립싱크 활성\n대본 TTS에 맞춰 입모양이 정확히 생성됩니다';
     } else {
       el.textContent = '🖼 정적 프레임';
       el.className = 'status-pill pill-gray';
-      el.title = '립싱크 API 키 미설정\nKLING_ACCESS_KEY + KLING_SECRET_KEY  →  Kling Lip-Sync\nDID_API_KEY  →  D-ID';
+      el.title = [
+        '립싱크 미설정 — 아래 중 하나 선택:',
+        '  무료: python scripts/setup_sadtalker.py',
+        '  유료: KLING_ACCESS_KEY+KLING_SECRET_KEY (.env)',
+        '  유료: DID_API_KEY (.env)',
+      ].join('\n');
     }
   } catch {
     el.textContent = 'AI 영상 확인 불가';
