@@ -472,6 +472,196 @@ textarea { resize: vertical; }
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ── 에셋 관리 ───────────────────────────────────────────────────────────── */
+.asset-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 14px;
+}
+
+.asset-tab {
+  border: none;
+  background: none;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-sub);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color .15s, border-color .15s;
+}
+.asset-tab:hover { color: var(--text); }
+.asset-tab.active { color: var(--kt-red); border-bottom-color: var(--kt-red); }
+
+.asset-panel { display: none; }
+.asset-panel.active { display: block; }
+
+.asset-upload-row {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.asset-preview-box {
+  flex-shrink: 0;
+  width: 200px;
+  height: 200px;
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  background: #0f172a;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.asset-preview-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.logo-preview {
+  background: #f8f9fb;
+  border-style: solid;
+}
+
+.asset-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #777;
+  font-size: 28px;
+  position: absolute;
+  inset: 0;
+}
+.asset-empty small { font-size: 12px; color: var(--text-sub); }
+
+.asset-upload-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 4px;
+}
+.asset-desc { font-size: 13px; line-height: 1.6; color: var(--text); }
+.asset-spec { font-size: 11px; color: var(--text-sub); }
+
+.asset-upload-btn { align-self: flex-start; cursor: pointer; }
+
+.upload-status {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+.upload-status.error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+/* 배경 그리드 */
+.bg-upload-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.bg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.bg-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+  position: relative;
+}
+.bg-card:hover { border-color: var(--kt-red); box-shadow: 0 2px 8px rgba(230,0,45,.15); }
+.bg-card.selected { border-color: var(--kt-red); border-width: 2px; }
+
+.bg-thumb {
+  width: 100%;
+  height: 80px;
+  object-fit: cover;
+  background: #1c1c2e;
+  display: block;
+}
+.bg-thumb-video {
+  width: 100%;
+  height: 80px;
+  background: #1c1c2e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: #fff;
+}
+
+.bg-card-label {
+  font-size: 11px;
+  color: var(--text-sub);
+  padding: 4px 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bg-card-del {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.6);
+  color: #fff;
+  border: none;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.bg-card:hover .bg-card-del { display: flex; }
+
+.bg-card-type {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(0,0,0,.55);
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.asset-empty-lg {
+  padding: 28px;
+  text-align: center;
+  color: var(--text-sub);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 28px;
+}
+.asset-empty-lg small { font-size: 13px; }
+
 /* ── 반응형 ──────────────────────────────────────────────────────────────── */
 @media (max-width: 1100px) {
   .workspace { grid-template-columns: 1fr; height: auto; overflow: visible; }

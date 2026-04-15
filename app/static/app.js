@@ -419,8 +419,7 @@ ireneUpload.addEventListener('change', async (e) => {
 // ── TTS 상태 확인 ────────────────────────────────────────────────────────
 async function checkTtsStatus() {
   try {
-    const data = await api('/health');
-    // 서버는 별도 tts 상태 엔드포인트가 없으므로 health로 생존 확인
+    await api('/health');
     ttsStatus.textContent = '서버 정상';
     ttsStatus.className = 'status-pill pill-green';
   } catch {
@@ -430,3 +429,190 @@ async function checkTtsStatus() {
 }
 
 checkTtsStatus();
+
+// ══════════════════════════════════════════════════════════════════════════
+// 에셋 관리
+// ══════════════════════════════════════════════════════════════════════════
+
+// ── 탭 전환 ──────────────────────────────────────────────────────────────
+document.querySelectorAll('.asset-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.asset-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.asset-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    $(`panel${cap(tab.dataset.tab)}`).classList.add('active');
+  });
+});
+
+function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+// ── 업로드 공통 ───────────────────────────────────────────────────────────
+async function uploadAsset(inputEl, endpoint, statusEl, previewImg, noEl, bust = true) {
+  const file = inputEl.files[0];
+  if (!file) return;
+  inputEl.value = '';
+
+  statusEl.textContent = '업로드 중…';
+  statusEl.className = 'upload-status';
+  statusEl.classList.remove('hidden');
+
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    await api(endpoint, { method: 'POST', body: fd });
+    statusEl.textContent = '✓ 등록 완료';
+    statusEl.classList.add('success');
+    if (previewImg) {
+      previewImg.src = `${endpoint}?t=${Date.now()}`;
+      previewImg.style.display = '';
+      if (noEl) noEl.style.display = 'none';
+    }
+    toast('에셋이 등록되었습니다.', 'success');
+  } catch (e) {
+    statusEl.textContent = `오류: ${e.message}`;
+    statusEl.className = 'upload-status error';
+    toast(`업로드 실패: ${e.message}`, 'error');
+  } finally {
+    setTimeout(() => statusEl.classList.add('hidden'), 3000);
+  }
+}
+
+// ── 아이린 이미지 업로드 ─────────────────────────────────────────────────
+$('uploadIrene').addEventListener('change', function () {
+  uploadAsset(
+    this,
+    '/api/assets/irene',
+    $('ireneUploadStatus'),
+    $('imgIrene'),
+    $('noIrene'),
+  ).then(() => {
+    // 사이드바 아이린 이미지도 갱신
+    const sideImg = $('irenePreview');
+    if (sideImg) {
+      sideImg.src = `/api/assets/irene?t=${Date.now()}`;
+      sideImg.style.display = '';
+      const fb = $('ireneFallback');
+      if (fb) fb.style.display = 'none';
+    }
+  });
+});
+
+// ── KT 로고 업로드 ───────────────────────────────────────────────────────
+$('uploadLogo').addEventListener('change', function () {
+  uploadAsset(
+    this,
+    '/api/assets/logo',
+    $('logoUploadStatus'),
+    $('imgLogo'),
+    $('noLogo'),
+  );
+});
+
+// ── 배경 파일 업로드 + 그리드 ────────────────────────────────────────────
+let selectedBg = null;   // 현재 선택된 배경 파일명
+
+async function loadBgGrid() {
+  const grid  = $('bgGrid');
+  const noEl  = $('noBg');
+  try {
+    const list = await api('/api/assets/backgrounds');
+    if (!list.length) {
+      grid.innerHTML = '';
+      noEl.style.display = 'flex';
+      return;
+    }
+    noEl.style.display = 'none';
+    grid.innerHTML = list.map(item => bgCard(item)).join('');
+  } catch { /* 무시 */ }
+}
+
+function bgCard(item) {
+  const isSelected = selectedBg === item.name;
+  const thumb = item.thumb_url
+    ? `<img class="bg-thumb" src="${item.thumb_url}" alt="${item.name}" loading="lazy"/>`
+    : `<div class="bg-thumb-video">${item.type === 'video' ? '🎬' : '🖼'}</div>`;
+  return `
+<div class="bg-card${isSelected ? ' selected' : ''}"
+     id="bgc_${item.name.replace(/\./g,'_')}"
+     onclick="selectBg('${item.name}', this)">
+  <span class="bg-card-type">${item.type === 'video' ? 'VID' : 'IMG'}</span>
+  ${thumb}
+  <div class="bg-card-label">${item.name}</div>
+  <button class="bg-card-del" title="삭제"
+          onclick="deleteBg(event,'${item.name}')">✕</button>
+</div>`;
+}
+
+window.selectBg = (name, el) => {
+  document.querySelectorAll('.bg-card').forEach(c => c.classList.remove('selected'));
+  if (selectedBg === name) {
+    selectedBg = null;   // 재클릭 시 선택 해제
+  } else {
+    selectedBg = name;
+    el.classList.add('selected');
+    toast(`배경 "${name}" 선택됨`, 'success');
+  }
+};
+
+window.deleteBg = async (e, name) => {
+  e.stopPropagation();
+  try {
+    await api(`/api/assets/backgrounds/${name}`, { method: 'DELETE' });
+    if (selectedBg === name) selectedBg = null;
+    await loadBgGrid();
+    toast('배경 파일 삭제됨', 'info');
+  } catch (err) {
+    toast(`삭제 실패: ${err.message}`, 'error');
+  }
+};
+
+$('uploadBg').addEventListener('change', async function () {
+  const file = this.files[0];
+  if (!file) return;
+  this.value = '';
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    toast('배경 파일 업로드 중…', 'info');
+    await api('/api/assets/backgrounds', { method: 'POST', body: fd });
+    await loadBgGrid();
+    toast('배경 파일이 추가되었습니다.', 'success');
+  } catch (e) {
+    toast(`업로드 실패: ${e.message}`, 'error');
+  }
+});
+
+// ── 구헤더의 아이린 업로드 버튼도 동기화 ────────────────────────────────
+const legacyUpload = $('ireneUpload');
+if (legacyUpload) {
+  legacyUpload.addEventListener('change', function () {
+    $('uploadIrene').files = this.files;
+    $('uploadIrene').dispatchEvent(new Event('change'));
+  });
+}
+
+// ── 초기 에셋 상태 로드 ──────────────────────────────────────────────────
+async function initAssets() {
+  try {
+    const status = await api('/api/assets/status');
+
+    // 아이린
+    if (status.irene.registered) {
+      const img = $('imgIrene');
+      if (img) { img.src = `/api/assets/irene?t=${Date.now()}`; img.style.display = ''; }
+      const no = $('noIrene');
+      if (no) no.style.display = 'none';
+    }
+    // 로고
+    if (status.logo.registered) {
+      const img = $('imgLogo');
+      if (img) { img.src = `/api/assets/logo?t=${Date.now()}`; img.style.display = ''; }
+      const no = $('noLogo');
+      if (no) no.style.display = 'none';
+    }
+  } catch { /* 서버 미기동 시 무시 */ }
+
+  await loadBgGrid();
+}
+
+initAssets();

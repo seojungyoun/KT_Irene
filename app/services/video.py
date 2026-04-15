@@ -20,12 +20,17 @@ from pathlib import Path
 from .tts import apply_pronunciation, synthesize_wav, write_srt
 
 # ── 경로 설정 ────────────────────────────────────────────────────────────────
-_BASE_DIR   = Path(__file__).resolve().parent.parent.parent
-ASSETS_DIR  = _BASE_DIR / "data" / "assets"
+_BASE_DIR      = Path(__file__).resolve().parent.parent.parent
+ASSETS_DIR     = _BASE_DIR / "data" / "assets"
+BG_UPLOAD_DIR  = ASSETS_DIR / "backgrounds"
 ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+BG_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-IRENE_REF_PATH  = ASSETS_DIR / "irene_reference.png"
-KT_LOGO_PATH    = ASSETS_DIR / "kt_logo.png"
+IRENE_REF_PATH = ASSETS_DIR / "irene_reference.png"
+KT_LOGO_PATH   = ASSETS_DIR / "kt_logo.png"
+
+_IMG_EXT = {".png", ".jpg", ".jpeg", ".webp"}
+_VID_EXT = {".mp4", ".mov", ".webm"}
 
 # ── 배경 색상 매핑 ────────────────────────────────────────────────────────────
 BG_COLORS = {
@@ -214,23 +219,40 @@ def _make_composite_frame(
     output_path: Path,
     W: int = 1280,
     H: int = 720,
+    custom_bg_path: Path | None = None,
 ) -> None:
     """배경 + 아이린 + 자막 + 로고를 합성한 프레임 이미지를 생성합니다."""
     from PIL import Image, ImageDraw, ImageFont  # type: ignore
 
-    # ── 배경 그라디언트 ─────────────────────────────────────────────────────
-    colors = BG_COLORS.get(background, BG_COLORS[DEFAULT_BG])
-    c1, c2 = colors[0], colors[1]
-    frame = Image.new("RGB", (W, H))
-    draw  = ImageDraw.Draw(frame)
-    for y in range(H):
-        r = int(c1[0] + (c2[0] - c1[0]) * y / H)
-        g = int(c1[1] + (c2[1] - c1[1]) * y / H)
-        b = int(c1[2] + (c2[2] - c1[2]) * y / H)
-        draw.line([(0, y), (W, y)], fill=(r, g, b))
+    # ── 배경 생성 ───────────────────────────────────────────────────────────
+    if custom_bg_path and custom_bg_path.exists():
+        # 커스텀 배경 이미지 사용
+        try:
+            frame = Image.open(custom_bg_path).convert("RGB")
+            frame = frame.resize((W, H), Image.LANCZOS)
+            # 어두운 오버레이로 가독성 확보
+            overlay = Image.new("RGBA", (W, H), (0, 0, 0, 90))
+            frame = Image.alpha_composite(frame.convert("RGBA"), overlay).convert("RGB")
+        except Exception:
+            custom_bg_path = None
 
-    # ── 앵커 데스크 효과 (하단 수평선) ──────────────────────────────────────
+    if not custom_bg_path:
+        # 기본 그라디언트 배경
+        colors = BG_COLORS.get(background, BG_COLORS[DEFAULT_BG])
+        c1, c2 = colors[0], colors[1]
+        frame = Image.new("RGB", (W, H))
+        draw  = ImageDraw.Draw(frame)
+        for y in range(H):
+            r = int(c1[0] + (c2[0] - c1[0]) * y / H)
+            g = int(c1[1] + (c2[1] - c1[1]) * y / H)
+            b = int(c1[2] + (c2[2] - c1[2]) * y / H)
+            draw.line([(0, y), (W, y)], fill=(r, g, b))
+    else:
+        c2 = BG_COLORS.get(background, BG_COLORS[DEFAULT_BG])[1]
+
+    # ── 앵커 데스크 효과 ─────────────────────────────────────────────────────
     desk_y = H - 140
+    draw  = ImageDraw.Draw(frame)
     draw.rectangle([0, desk_y, W, desk_y + 3], fill=(230, 0, 45))
     draw.rectangle([0, desk_y + 4, W, H], fill=_darken(c2, 20))
 
@@ -421,6 +443,7 @@ def generate_scene_video(
     logo_position: str = "top-right",
     outfit: str = "white_mockneck",
     hair: str = "long_s_wave_6_4",
+    custom_bg: str | None = None,       # 커스텀 배경 파일명 (data/assets/backgrounds/)
 ) -> tuple[float, Path, Path, Path, Path]:
     """
     씬 비디오를 완전히 생성합니다.
@@ -444,12 +467,18 @@ def generate_scene_video(
 
     # ③ 컴포지트 프레임 (PIL)
     frame_path = scene_dir / "frame_composite.png"
+    custom_bg_path: Path | None = None
+    if custom_bg:
+        p = BG_UPLOAD_DIR / custom_bg
+        if p.exists():
+            custom_bg_path = p
     _make_composite_frame(
         subtitle=scene_script,
         background=background,
         logo_position=logo_position,
         outfit=outfit,
         output_path=frame_path,
+        custom_bg_path=custom_bg_path,
     )
 
     # ④ 비디오 생성 (ffmpeg → moviepy → placeholder)
