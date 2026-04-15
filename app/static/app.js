@@ -434,16 +434,13 @@ async function checkAiVideoStatus() {
   try {
     const s = await api('/api/ai-video/status');
     if (s.ai_enabled) {
-      const icon = s.lip_sync ? '🎙' : '🎬';
-      el.textContent = `${icon} ${s.label}`;
+      el.textContent = `🎙 ${s.label}`;
       el.className = 'status-pill pill-green';
-      el.title = s.lip_sync
-        ? '실제 립싱크: TTS 오디오에 맞춰 입 모양이 생성됩니다'
-        : '동작 영상: 말하는 동작 생성 후 TTS 오디오 overlay (립싱크 아님)';
+      el.title = '립싱크 활성: 대본 TTS 오디오에 맞춰 아이린 입모양이 생성됩니다';
     } else {
       el.textContent = '🖼 정적 프레임';
       el.className = 'status-pill pill-gray';
-      el.title = 'AI 영상 API 키 미설정\nKLING_ACCESS_KEY+KLING_SECRET_KEY (립싱크)\nGOOGLE_API_KEY (Veo 3)\nMINIMAX_API_KEY+MINIMAX_GROUP_ID (Hailuo)';
+      el.title = '립싱크 API 키 미설정\nKLING_ACCESS_KEY + KLING_SECRET_KEY  →  Kling Lip-Sync\nDID_API_KEY  →  D-ID';
     }
   } catch {
     el.textContent = 'AI 영상 확인 불가';
