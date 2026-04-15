@@ -465,39 +465,70 @@ def generate_scene_video(
     subtitle_path = scene_dir / "subtitle.srt"
     write_srt(scene_script, duration, subtitle_path)
 
-    # ③ 비디오 생성: AI 영상 우선 → 실패 시만 PIL 정적 프레임
-    video_path = scene_dir / "scene.mp4"
-    ai_ok = False
+    # ③ 씬 이미지 확정 (플로우차트: 이미지 생성 → 품질평가 → 최대 4회 재생성)
+    #    DALL-E 성공 → AI 생성 이미지 사용
+    #    실패 → 아이린 레퍼런스 이미지 fallback
+    import logging as _log
+    _logger = _log.getLogger(__name__)
 
-    if IRENE_REF_PATH.exists():
+    generated_img = scene_dir / "scene_image.png"
+    ai_img_ok = False
+    try:
+        from .image_gen import generate_scene_image
+        ai_img_ok = generate_scene_image(scene_script, generated_img)
+    except Exception as _e:
+        _logger.warning(f"이미지 생성 예외: {_e}")
+
+    # 씬에 사용할 기준 이미지 결정
+    scene_image: Path = generated_img if ai_img_ok else IRENE_REF_PATH
+
+    # ④ 비디오 생성
+    #    립싱크 API(Kling/D-ID) → 정적 프레임(PIL 합성) 순으로 시도
+    video_path = scene_dir / "scene.mp4"
+    ai_video_ok = False
+
+    if scene_image.exists():
         try:
             from .ai_video import generate_ai_video
-            ai_ok = generate_ai_video(
-                image_path=IRENE_REF_PATH,
+            ai_video_ok = generate_ai_video(
+                image_path=scene_image,
                 audio_path=wav_path,
-                duration=int(duration),  # Veo3/Hailuo에서 참고용
+                duration=int(duration),
                 output_path=video_path,
             )
         except Exception as _ae:
-            import logging
-            logging.getLogger(__name__).warning(f"AI 영상 생성 예외: {_ae}")
+            _logger.warning(f"AI 영상(립싱크) 생성 예외: {_ae}")
 
-    # AI 실패(또는 미설정) 시에만 PIL 프레임 생성 후 ffmpeg/moviepy
-    if not ai_ok:
+    # 립싱크 실패 → PIL 합성 프레임 + ffmpeg
+    if not ai_video_ok:
         frame_path = scene_dir / "frame_composite.png"
         custom_bg_path: Path | None = None
         if custom_bg:
             p = BG_UPLOAD_DIR / custom_bg
             if p.exists():
                 custom_bg_path = p
-        _make_composite_frame(
-            subtitle=scene_script,
-            background=background,
-            logo_position=logo_position,
-            outfit=outfit,
-            output_path=frame_path,
-            custom_bg_path=custom_bg_path,
-        )
+
+        if ai_img_ok:
+            # AI 생성 이미지를 배경으로 PIL 합성 (자막 + 로고만 추가)
+            _make_composite_frame(
+                subtitle=scene_script,
+                background=background,
+                logo_position=logo_position,
+                outfit=outfit,
+                output_path=frame_path,
+                custom_bg_path=generated_img,   # AI 이미지를 배경으로
+            )
+        else:
+            # 기존 방식: 그라디언트 배경 + 아이린 레퍼런스
+            _make_composite_frame(
+                subtitle=scene_script,
+                background=background,
+                logo_position=logo_position,
+                outfit=outfit,
+                output_path=frame_path,
+                custom_bg_path=custom_bg_path,
+            )
+
         if not _ffmpeg_image_to_video(frame_path, wav_path, duration, video_path):
             if not _moviepy_fallback(frame_path, wav_path, duration, video_path):
                 video_path.write_text(

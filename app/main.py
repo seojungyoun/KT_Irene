@@ -33,6 +33,7 @@ from .services.renderer import render_final_video
 from .services.scene_splitter import recommended_limit_by_seconds, split_script
 from .services.video import generate_scene_video, IRENE_REF_PATH, ASSETS_DIR, KT_LOGO_PATH
 from .services.ai_video import ai_video_status
+from .services.image_gen import image_gen_status
 
 BASE_DIR   = Path(__file__).resolve().parent.parent
 DATA_DIR   = BASE_DIR / "data" / "projects"
@@ -495,8 +496,14 @@ def get_asset_status():
 
 @app.get("/api/ai-video/status")
 def get_ai_video_status():
-    """현재 설정된 AI 영상 생성 엔진 상태 반환."""
+    """립싱크 엔진 상태."""
     return ai_video_status()
+
+
+@app.get("/api/image-gen/status")
+def get_image_gen_status():
+    """씬 이미지 생성 엔진 상태."""
+    return image_gen_status()
 
 
 # ── 파일 다운로드 ────────────────────────────────────────────────────────────
