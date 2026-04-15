@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
   <title>KT Irene Studio</title>
-  <link rel="stylesheet" href="/static/style.css?v=20260414-3"/>
+  <link rel="stylesheet" href="/static/style.css?v=20260415-2"/>
 </head>
 <body>
 
@@ -30,6 +30,7 @@
       <input type="file" id="ireneUpload" accept="image/*" style="display:none"/>
     </label>
     <div id="ttsStatus" class="status-pill">TTS 확인 중…</div>
+    <div id="aiVideoStatus" class="status-pill">AI 영상 확인 중…</div>
   </div>
 </header>
 
@@ -67,10 +68,8 @@
     <div class="side-section">
       <div class="section-title">아이린 레퍼런스</div>
       <div class="irene-wrap">
-        <img id="irenePreview" src="/api/irene/reference" class="irene-img"
-             onerror="this.style.display='none';document.getElementById('ireneFallback').style.display='flex'"
-             alt="아이린"/>
-        <div id="ireneFallback" class="irene-fallback" style="display:none">
+        <img id="irenePreview" class="irene-img" style="display:none" alt="아이린"/>
+        <div id="ireneFallback" class="irene-fallback">
           <span>📷</span>
           <small>아이린 이미지를 업로드하세요</small>
         </div>
@@ -148,6 +147,81 @@
       </div>
     </div>
 
+    <!-- 에셋 관리 카드 -->
+    <div class="card">
+      <div class="card-header">
+        <h2>에셋 관리</h2>
+        <span class="meta">영상에 사용할 이미지 / 동영상</span>
+      </div>
+
+      <!-- 에셋 탭 -->
+      <div class="asset-tabs">
+        <button class="asset-tab active" data-tab="irene">아이린 이미지</button>
+        <button class="asset-tab" data-tab="logo">KT 로고</button>
+        <button class="asset-tab" data-tab="bg">배경 파일</button>
+      </div>
+
+      <!-- 아이린 탭 -->
+      <div class="asset-panel active" id="panelIrene">
+        <div class="asset-upload-row">
+          <div class="asset-preview-box" id="prevIrene">
+            <img id="imgIrene" src="/api/assets/irene" alt="아이린"
+                 onerror="this.style.display='none';document.getElementById('noIrene').style.display='flex'"/>
+            <div id="noIrene" class="asset-empty">
+              <span>👤</span><small>이미지 없음</small>
+            </div>
+          </div>
+          <div class="asset-upload-info">
+            <p class="asset-desc">아이린 마스터 이미지<br>모든 씬 배경에 합성됩니다.</p>
+            <p class="asset-spec">권장: PNG, 투명 배경, 640×720+</p>
+            <label class="btn btn-primary asset-upload-btn">
+              📂 이미지 업로드
+              <input type="file" id="uploadIrene" accept="image/*" style="display:none"/>
+            </label>
+            <div id="ireneUploadStatus" class="upload-status hidden"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 로고 탭 -->
+      <div class="asset-panel" id="panelLogo">
+        <div class="asset-upload-row">
+          <div class="asset-preview-box logo-preview" id="prevLogo">
+            <img id="imgLogo" src="/api/assets/logo" alt="KT 로고"
+                 onerror="this.style.display='none';document.getElementById('noLogo').style.display='flex'"/>
+            <div id="noLogo" class="asset-empty">
+              <span>🏷</span><small>로고 없음</small>
+            </div>
+          </div>
+          <div class="asset-upload-info">
+            <p class="asset-desc">KT 로고 이미지<br>영상 모서리에 삽입됩니다.</p>
+            <p class="asset-spec">권장: PNG, 투명 배경, 400×300+</p>
+            <label class="btn btn-primary asset-upload-btn">
+              📂 로고 업로드
+              <input type="file" id="uploadLogo" accept="image/*" style="display:none"/>
+            </label>
+            <div id="logoUploadStatus" class="upload-status hidden"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 배경 탭 -->
+      <div class="asset-panel" id="panelBg">
+        <div class="bg-upload-bar">
+          <label class="btn btn-primary">
+            📂 배경 추가 (이미지/동영상)
+            <input type="file" id="uploadBg" accept="image/*,video/*" style="display:none"/>
+          </label>
+          <span class="meta">PNG · JPG · MP4 · MOV 등 지원</span>
+        </div>
+        <div id="bgGrid" class="bg-grid"></div>
+        <div id="noBg" class="asset-empty-lg">
+          <span>🖼</span>
+          <small>업로드된 배경 파일이 없습니다</small>
+        </div>
+      </div>
+    </div>
+
     <!-- 씬 편집 카드 -->
     <div class="card">
       <div class="card-header">
@@ -166,6 +240,6 @@
 <!-- ── 토스트 알림 ──────────────────────────────────────────────────────── -->
 <div id="toast" class="toast hidden"></div>
 
-<script src="/static/app.js?v=20260414-3"></script>
+<script src="/static/app.js?v=20260415-2"></script>
 </body>
 </html>
