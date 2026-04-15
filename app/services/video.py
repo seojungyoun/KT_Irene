@@ -465,42 +465,39 @@ def generate_scene_video(
     subtitle_path = scene_dir / "subtitle.srt"
     write_srt(scene_script, duration, subtitle_path)
 
-    # ③ 컴포지트 프레임 (PIL) — AI 영상 실패 시 fallback용으로 항상 생성
-    frame_path = scene_dir / "frame_composite.png"
-    custom_bg_path: Path | None = None
-    if custom_bg:
-        p = BG_UPLOAD_DIR / custom_bg
-        if p.exists():
-            custom_bg_path = p
-    _make_composite_frame(
-        subtitle=scene_script,
-        background=background,
-        logo_position=logo_position,
-        outfit=outfit,
-        output_path=frame_path,
-        custom_bg_path=custom_bg_path,
-    )
-
-    # ④ 비디오 생성: AI 영상 우선 → ffmpeg 정적 → moviepy → placeholder
+    # ③ 비디오 생성: AI 영상 우선 → 실패 시만 PIL 정적 프레임
     video_path = scene_dir / "scene.mp4"
     ai_ok = False
 
-    # AI 영상 시도 (아이린 레퍼런스 이미지가 있을 때만)
     if IRENE_REF_PATH.exists():
         try:
             from .ai_video import generate_ai_video
             ai_ok = generate_ai_video(
                 image_path=IRENE_REF_PATH,
                 audio_path=wav_path,
-                duration=int(duration),
+                duration=int(duration),  # Veo3/Hailuo에서 참고용
                 output_path=video_path,
             )
         except Exception as _ae:
             import logging
             logging.getLogger(__name__).warning(f"AI 영상 생성 예외: {_ae}")
 
-    # AI 실패 시 PIL 정적 프레임으로 fallback
+    # AI 실패(또는 미설정) 시에만 PIL 프레임 생성 후 ffmpeg/moviepy
     if not ai_ok:
+        frame_path = scene_dir / "frame_composite.png"
+        custom_bg_path: Path | None = None
+        if custom_bg:
+            p = BG_UPLOAD_DIR / custom_bg
+            if p.exists():
+                custom_bg_path = p
+        _make_composite_frame(
+            subtitle=scene_script,
+            background=background,
+            logo_position=logo_position,
+            outfit=outfit,
+            output_path=frame_path,
+            custom_bg_path=custom_bg_path,
+        )
         if not _ffmpeg_image_to_video(frame_path, wav_path, duration, video_path):
             if not _moviepy_fallback(frame_path, wav_path, duration, video_path):
                 video_path.write_text(
