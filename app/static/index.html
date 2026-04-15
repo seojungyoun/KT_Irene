@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
   <title>KT Irene Studio</title>
-  <link rel="stylesheet" href="/static/style.css?v=20260414-3"/>
+  <link rel="stylesheet" href="/static/style.css?v=20260415-2"/>
 </head>
 <body>
 
@@ -30,6 +30,7 @@
       <input type="file" id="ireneUpload" accept="image/*" style="display:none"/>
     </label>
     <div id="ttsStatus" class="status-pill">TTS 확인 중…</div>
+    <div id="aiVideoStatus" class="status-pill">AI 영상 확인 중…</div>
   </div>
 </header>
 
@@ -67,10 +68,8 @@
     <div class="side-section">
       <div class="section-title">아이린 레퍼런스</div>
       <div class="irene-wrap">
-        <img id="irenePreview" src="/api/irene/reference" class="irene-img"
-             onerror="this.style.display='none';document.getElementById('ireneFallback').style.display='flex'"
-             alt="아이린"/>
-        <div id="ireneFallback" class="irene-fallback" style="display:none">
+        <img id="irenePreview" class="irene-img" style="display:none" alt="아이린"/>
+        <div id="ireneFallback" class="irene-fallback">
           <span>📷</span>
           <small>아이린 이미지를 업로드하세요</small>
         </div>
@@ -241,6 +240,6 @@
 <!-- ── 토스트 알림 ──────────────────────────────────────────────────────── -->
 <div id="toast" class="toast hidden"></div>
 
-<script src="/static/app.js?v=20260414-3"></script>
+<script src="/static/app.js?v=20260415-2"></script>
 </body>
 </html>

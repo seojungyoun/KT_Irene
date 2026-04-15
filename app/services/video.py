@@ -465,7 +465,7 @@ def generate_scene_video(
     subtitle_path = scene_dir / "subtitle.srt"
     write_srt(scene_script, duration, subtitle_path)
 
-    # ③ 컴포지트 프레임 (PIL)
+    # ③ 컴포지트 프레임 (PIL) — AI 영상 실패 시 fallback용으로 항상 생성
     frame_path = scene_dir / "frame_composite.png"
     custom_bg_path: Path | None = None
     if custom_bg:
@@ -481,13 +481,31 @@ def generate_scene_video(
         custom_bg_path=custom_bg_path,
     )
 
-    # ④ 비디오 생성 (ffmpeg → moviepy → placeholder)
+    # ④ 비디오 생성: AI 영상 우선 → ffmpeg 정적 → moviepy → placeholder
     video_path = scene_dir / "scene.mp4"
-    if not _ffmpeg_image_to_video(frame_path, wav_path, duration, video_path):
-        if not _moviepy_fallback(frame_path, wav_path, duration, video_path):
-            video_path.write_text(
-                "비디오 생성 실패: ffmpeg와 moviepy 모두 사용 불가\n", encoding="utf-8"
+    ai_ok = False
+
+    # AI 영상 시도 (아이린 레퍼런스 이미지가 있을 때만)
+    if IRENE_REF_PATH.exists():
+        try:
+            from .ai_video import generate_ai_video
+            ai_ok = generate_ai_video(
+                image_path=IRENE_REF_PATH,
+                audio_path=wav_path,
+                duration=int(duration),
+                output_path=video_path,
             )
+        except Exception as _ae:
+            import logging
+            logging.getLogger(__name__).warning(f"AI 영상 생성 예외: {_ae}")
+
+    # AI 실패 시 PIL 정적 프레임으로 fallback
+    if not ai_ok:
+        if not _ffmpeg_image_to_video(frame_path, wav_path, duration, video_path):
+            if not _moviepy_fallback(frame_path, wav_path, duration, video_path):
+                video_path.write_text(
+                    "비디오 생성 실패: ffmpeg와 moviepy 모두 사용 불가\n", encoding="utf-8"
+                )
 
     # ⑤ 마지막 프레임 추출
     last_frame_path = scene_dir / "last_frame.png"

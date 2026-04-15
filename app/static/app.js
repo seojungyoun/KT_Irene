@@ -416,7 +416,7 @@ ireneUpload.addEventListener('change', async (e) => {
   }
 });
 
-// ── TTS 상태 확인 ────────────────────────────────────────────────────────
+// ── TTS / AI 영상 상태 확인 ──────────────────────────────────────────────
 async function checkTtsStatus() {
   try {
     await api('/health');
@@ -428,7 +428,27 @@ async function checkTtsStatus() {
   }
 }
 
+async function checkAiVideoStatus() {
+  const el = $('aiVideoStatus');
+  if (!el) return;
+  try {
+    const s = await api('/api/ai-video/status');
+    if (s.ai_enabled) {
+      el.textContent = `🎬 ${s.label}`;
+      el.className = 'status-pill pill-green';
+    } else {
+      el.textContent = '🖼 정적 프레임';
+      el.className = 'status-pill pill-gray';
+      el.title = 'AI 영상 API 키 미설정 — KLING_ACCESS_KEY 또는 GOOGLE_API_KEY 환경변수 필요';
+    }
+  } catch {
+    el.textContent = 'AI 영상 확인 불가';
+    el.className = 'status-pill pill-red';
+  }
+}
+
 checkTtsStatus();
+checkAiVideoStatus();
 
 // ══════════════════════════════════════════════════════════════════════════
 // 에셋 관리
@@ -598,10 +618,16 @@ async function initAssets() {
 
     // 아이린
     if (status.irene.registered) {
+      const url = `/api/assets/irene?t=${Date.now()}`;
+      // 에셋 관리 카드
       const img = $('imgIrene');
-      if (img) { img.src = `/api/assets/irene?t=${Date.now()}`; img.style.display = ''; }
+      if (img) { img.src = url; img.style.display = ''; }
       const no = $('noIrene');
       if (no) no.style.display = 'none';
+      // 사이드 패널
+      irenePreview.src = url;
+      irenePreview.style.display = '';
+      $('ireneFallback').style.display = 'none';
     }
     // 로고
     if (status.logo.registered) {

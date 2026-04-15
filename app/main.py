@@ -32,6 +32,7 @@ from .schemas import (
 from .services.renderer import render_final_video
 from .services.scene_splitter import recommended_limit_by_seconds, split_script
 from .services.video import generate_scene_video, IRENE_REF_PATH, ASSETS_DIR, KT_LOGO_PATH
+from .services.ai_video import ai_video_status
 
 BASE_DIR   = Path(__file__).resolve().parent.parent
 DATA_DIR   = BASE_DIR / "data" / "projects"
@@ -490,6 +491,12 @@ def get_asset_status():
         "logo":  {"registered": KT_LOGO_PATH.exists(),   "url": "/api/assets/logo"},
         "backgrounds": bgs,
     }
+
+
+@app.get("/api/ai-video/status")
+def get_ai_video_status():
+    """현재 설정된 AI 영상 생성 엔진 상태 반환."""
+    return ai_video_status()
 
 
 # ── 파일 다운로드 ────────────────────────────────────────────────────────────
