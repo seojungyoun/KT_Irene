@@ -448,7 +448,28 @@ async function checkAiVideoStatus() {
   }
 }
 
+async function checkImgGenStatus() {
+  const el = $('imgGenStatus');
+  if (!el) return;
+  try {
+    const s = await api('/api/image-gen/status');
+    if (s.enabled) {
+      el.textContent = `🖼 ${s.label}`;
+      el.className = 'status-pill pill-green';
+      el.title = '씬별 AI 이미지 생성 활성 (최대 4회 품질 재시도)';
+    } else {
+      el.textContent = '🖼 정적 이미지';
+      el.className = 'status-pill pill-gray';
+      el.title = 'OPENAI_API_KEY 설정 시 DALL-E 3로 씬별 이미지 자동 생성';
+    }
+  } catch {
+    el.textContent = '이미지 확인 불가';
+    el.className = 'status-pill pill-red';
+  }
+}
+
 checkTtsStatus();
+checkImgGenStatus();
 checkAiVideoStatus();
 
 // ══════════════════════════════════════════════════════════════════════════
