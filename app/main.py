@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import threading
 import uuid
+import os
 from pathlib import Path
 from typing import Any
 
@@ -20,7 +21,7 @@ from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from app.services.veo_video import init_veo, generate_veo_video
+from app.services.veo_video import generate_veo_video
 
 from .models import Project, Scene, utc_now_iso
 from .schemas import (
@@ -249,18 +250,41 @@ def update_scene(project_id: str, scene_id: str, req: SceneUpdateRequest):
 #     _save_project(project)
 #     return ProjectResponse(**project.to_dict())
 
-@app.post("/api/generate-veo")
-async def create_veo_video(prompt: str):
-    # 저장될 파일 이름 생성
-    file_id = str(uuid.uuid4())
-    output_path = f"data/outputs/{file_id}.mp4"
+@app.post("/api/projects/{project_id}/scenes/{scene_index}/generate-veo")
+async def create_veo_scene_video(project_id: str, scene_index: int):
+    # 1. 프로젝트 설정 및 경로 파악
+    project = get_project_or_404(project_id)
     
-    # 영상 생성 실행
+    # 데이터 구조에 맞춰 content.scenes로 접근
     try:
-        result_path = generate_video_content(prompt, output_path)
-        return {"status": "success", "video_url": result_path}
+        scene = project.content.scenes[scene_index]
+    except (AttributeError, IndexError):
+        # 위 방식이 안되면 기존 방식으로 재시도
+        scene = project.scenes[scene_index]
+    
+    # 2. 영상이 저장될 경로 설정
+    scene_dir = f"data/projects/{project_id}/scene_{scene_index:03d}_v1"
+    os.makedirs(scene_dir, exist_ok=True)
+    video_path = os.path.join(scene_dir, "veo_output.mp4")
+    
+    # 3. Veo API 호출
+    try:
+        # scene.text를 기반으로 비디오 생성
+        result = await generate_veo_video(scene.text, video_path)
+        
+        if result:
+            return {
+                "status": "success", 
+                "video_path": video_path,
+                "message": "Veo 영상 생성이 완료되었습니다."
+            }
+        else:
+            return {"status": "error", "message": "Veo API 응답이 올바르지 않습니다."}
+            
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        # 에러 발생 시 상세 내용 출력
+        print(f"Error in generate-veo: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"영상 생성 실패: {str(e)}")
 
 
 # ── 전체 생성 (비동기 백그라운드) ─────────────────────────────────────────────
