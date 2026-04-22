@@ -32,11 +32,22 @@ from .schemas import (
 )
 from .services.renderer import render_final_video
 from .services.scene_splitter import recommended_limit_by_seconds, split_script
-from .services.video import generate_scene_video, IRENE_REF_PATH
+from .services.video import generate_scene_video, IRENE_REF_PATH, ASSETS_DIR, KT_LOGO_PATH
+from .services.ai_video import ai_video_status
+from .services.image_gen import image_gen_status
 
-BASE_DIR  = Path(__file__).resolve().parent.parent
-DATA_DIR  = BASE_DIR / "data" / "projects"
+BASE_DIR   = Path(__file__).resolve().parent.parent
+DATA_DIR   = BASE_DIR / "data" / "projects"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
+ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+
+# 커스텀 배경 저장 경로
+BG_UPLOAD_DIR = ASSETS_DIR / "backgrounds"
+BG_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+# 허용 이미지/영상 확장자
+_IMG_EXT = {".png", ".jpg", ".jpeg", ".webp"}
+_VID_EXT = {".mp4", ".mov", ".webm", ".avi"}
 
 PROJECTS: dict[str, Project] = {}
 
@@ -346,22 +357,167 @@ def render_final(project_id: str):
     return ProjectResponse(**project.to_dict())
 
 
-# ── 아이린 레퍼런스 이미지 업로드 ───────────────────────────────────────────
-@app.post("/api/irene/upload-reference")
-async def upload_irene_reference(file: UploadFile = File(...)):
-    """아이린 마스터 이미지를 업로드합니다 (PNG/JPG)."""
+# ══════════════════════════════════════════════════════════════════════════════
+# 에셋 관리 API
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _check_image(file: UploadFile) -> None:
     if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="이미지 파일만 업로드 가능합니다.")
+        raise HTTPException(status_code=400, detail="이미지 파일(PNG/JPG)만 업로드 가능합니다.")
+
+def _check_media(file: UploadFile) -> None:
+    ct = file.content_type or ""
+    if not (ct.startswith("image/") or ct.startswith("video/")):
+        raise HTTPException(status_code=400, detail="이미지 또는 동영상 파일만 업로드 가능합니다.")
+
+# ── 아이린 레퍼런스 이미지 ──────────────────────────────────────────────────
+@app.post("/api/assets/irene")
+async def upload_irene(file: UploadFile = File(...)):
+    """아이린 마스터 이미지 등록 (PNG/JPG)."""
+    _check_image(file)
     content = await file.read()
     IRENE_REF_PATH.write_bytes(content)
-    return {"message": "아이린 레퍼런스 이미지가 등록되었습니다.", "size": len(content)}
+    return {"message": "아이린 이미지가 등록되었습니다.", "size": len(content),
+            "url": "/api/assets/irene"}
 
+@app.get("/api/assets/irene")
+def get_irene():
+    if not IRENE_REF_PATH.exists():
+        raise HTTPException(status_code=404, detail="등록된 아이린 이미지가 없습니다.")
+    return FileResponse(IRENE_REF_PATH)
+
+# 하위 호환 경로 유지
+@app.post("/api/irene/upload-reference")
+async def upload_irene_reference(file: UploadFile = File(...)):
+    return await upload_irene(file)
 
 @app.get("/api/irene/reference")
 def get_irene_reference():
-    if not IRENE_REF_PATH.exists():
-        raise HTTPException(status_code=404, detail="레퍼런스 이미지가 없습니다.")
-    return FileResponse(IRENE_REF_PATH)
+    return get_irene()
+
+# ── KT 로고 ────────────────────────────────────────────────────────────────
+@app.post("/api/assets/logo")
+async def upload_logo(file: UploadFile = File(...)):
+    """KT 로고 이미지 교체 (PNG 권장, 투명 배경)."""
+    _check_image(file)
+    content = await file.read()
+    KT_LOGO_PATH.write_bytes(content)
+    # 소형 버전도 갱신
+    try:
+        from PIL import Image
+        import io
+        img = Image.open(io.BytesIO(content)).convert("RGBA")
+        img.thumbnail((150, 112), Image.LANCZOS)
+        img.save(str(KT_LOGO_PATH.parent / "kt_logo_sm.png"), "PNG")
+    except Exception:
+        pass
+    return {"message": "KT 로고가 등록되었습니다.", "size": len(content),
+            "url": "/api/assets/logo"}
+
+@app.get("/api/assets/logo")
+def get_logo():
+    if not KT_LOGO_PATH.exists():
+        raise HTTPException(status_code=404, detail="등록된 로고가 없습니다.")
+    return FileResponse(KT_LOGO_PATH)
+
+# ── 배경 이미지 / 동영상 ─────────────────────────────────────────────────────
+@app.post("/api/assets/backgrounds")
+async def upload_background(file: UploadFile = File(...)):
+    """배경 이미지 또는 동영상 업로드."""
+    _check_media(file)
+    suffix = Path(file.filename or "bg.png").suffix.lower()
+    if suffix not in _IMG_EXT | _VID_EXT:
+        raise HTTPException(status_code=400,
+                            detail=f"지원 형식: {sorted(_IMG_EXT | _VID_EXT)}")
+    safe_name = f"{uuid.uuid4().hex[:8]}{suffix}"
+    dest = BG_UPLOAD_DIR / safe_name
+    dest.write_bytes(await file.read())
+
+    # 이미지이면 썸네일 생성
+    thumb_url = None
+    if suffix in _IMG_EXT:
+        thumb_path = BG_UPLOAD_DIR / f"{dest.stem}_thumb.jpg"
+        try:
+            from PIL import Image
+            img = Image.open(dest).convert("RGB")
+            img.thumbnail((320, 180), Image.LANCZOS)
+            img.save(thumb_path, "JPEG", quality=80)
+            thumb_url = f"/api/assets/backgrounds/{thumb_path.name}"
+        except Exception:
+            pass
+
+    return {
+        "name": safe_name,
+        "original": file.filename,
+        "url": f"/api/assets/backgrounds/{safe_name}",
+        "thumb_url": thumb_url,
+        "type": "video" if suffix in _VID_EXT else "image",
+    }
+
+@app.get("/api/assets/backgrounds")
+def list_backgrounds():
+    """업로드된 배경 파일 목록."""
+    items = []
+    for f in sorted(BG_UPLOAD_DIR.iterdir()):
+        if f.suffix.lower() in _IMG_EXT | _VID_EXT and "_thumb" not in f.stem:
+            thumb = BG_UPLOAD_DIR / f"{f.stem}_thumb.jpg"
+            items.append({
+                "name": f.name,
+                "url": f"/api/assets/backgrounds/{f.name}",
+                "thumb_url": f"/api/assets/backgrounds/{thumb.name}" if thumb.exists() else None,
+                "type": "video" if f.suffix.lower() in _VID_EXT else "image",
+                "size": f.stat().st_size,
+            })
+    return items
+
+@app.get("/api/assets/backgrounds/{filename}")
+def get_background_file(filename: str):
+    p = BG_UPLOAD_DIR / filename
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
+    return FileResponse(p)
+
+@app.delete("/api/assets/backgrounds/{filename}")
+def delete_background(filename: str):
+    p = BG_UPLOAD_DIR / filename
+    if p.exists():
+        p.unlink()
+    thumb = BG_UPLOAD_DIR / f"{Path(filename).stem}_thumb.jpg"
+    if thumb.exists():
+        thumb.unlink()
+    return {"message": "삭제되었습니다."}
+
+# ── 에셋 전체 상태 ─────────────────────────────────────────────────────────
+@app.get("/api/assets/status")
+def get_asset_status():
+    """등록된 에셋 현황 한 번에 조회."""
+    bgs = []
+    for f in sorted(BG_UPLOAD_DIR.iterdir()):
+        if f.suffix.lower() in _IMG_EXT | _VID_EXT and "_thumb" not in f.stem:
+            thumb = BG_UPLOAD_DIR / f"{f.stem}_thumb.jpg"
+            bgs.append({
+                "name": f.name,
+                "url": f"/api/assets/backgrounds/{f.name}",
+                "thumb_url": f"/api/assets/backgrounds/{thumb.name}" if thumb.exists() else None,
+                "type": "video" if f.suffix.lower() in _VID_EXT else "image",
+            })
+    return {
+        "irene": {"registered": IRENE_REF_PATH.exists(), "url": "/api/assets/irene"},
+        "logo":  {"registered": KT_LOGO_PATH.exists(),   "url": "/api/assets/logo"},
+        "backgrounds": bgs,
+    }
+
+
+@app.get("/api/ai-video/status")
+def get_ai_video_status():
+    """립싱크 엔진 상태."""
+    return ai_video_status()
+
+
+@app.get("/api/image-gen/status")
+def get_image_gen_status():
+    """씬 이미지 생성 엔진 상태."""
+    return image_gen_status()
 
 
 # ── 파일 다운로드 ────────────────────────────────────────────────────────────
