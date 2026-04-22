@@ -20,6 +20,7 @@ from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from app.services.veo_video import init_veo, generate_veo_video
 
 from .models import Project, Scene, utc_now_iso
 from .schemas import (
@@ -226,16 +227,29 @@ def update_scene(project_id: str, scene_id: str, req: SceneUpdateRequest):
 
 
 # ── 씬 생성 (동기) ───────────────────────────────────────────────────────────
-@app.post("/api/projects/{project_id}/scenes/{scene_id}/generate",
-          response_model=ProjectResponse)
-def generate_scene(project_id: str, scene_id: str, req: GenerateSceneRequest):
-    project = _get_project(project_id)
-    scene   = _get_scene(project, scene_id)
-    _generate_scene_internal(project, scene, req.pronunciation_dict)
-    project.status = "generating"
-    project.touch()
-    _save_project(project)
-    return ProjectResponse(**project.to_dict())
+# @app.post("/api/projects/{project_id}/scenes/{scene_id}/generate",
+#           response_model=ProjectResponse)
+# def generate_scene(project_id: str, scene_id: str, req: GenerateSceneRequest):
+#     project = _get_project(project_id)
+#     scene   = _get_scene(project, scene_id)
+#     _generate_scene_internal(project, scene, req.pronunciation_dict)
+#     project.status = "generating"
+#     project.touch()
+#     _save_project(project)
+#     return ProjectResponse(**project.to_dict())
+
+@app.post("/api/generate-veo")
+async def create_veo_video(prompt: str):
+    # 저장될 파일 이름 생성
+    file_id = str(uuid.uuid4())
+    output_path = f"data/outputs/{file_id}.mp4"
+    
+    # 영상 생성 실행
+    try:
+        result_path = generate_video_content(prompt, output_path)
+        return {"status": "success", "video_url": result_path}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 
 # ── 전체 생성 (비동기 백그라운드) ─────────────────────────────────────────────

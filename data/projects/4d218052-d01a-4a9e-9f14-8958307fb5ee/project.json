@@ -1,0 +1,38 @@
+{
+  "project_id": "4d218052-d01a-4a9e-9f14-8958307fb5ee",
+  "title": "오전 뉴스 브리핑",
+  "script": "안녕안녕",
+  "template": "C",
+  "background": "kt_studio",
+  "outfit": "white_mockneck",
+  "hair": "long_s_wave_6_4",
+  "logo_position": "top-right",
+  "logo_scale": 12,
+  "subtitle_font": "Pretendard",
+  "target_scene_sec": 8,
+  "status": "generating",
+  "created_at": "2026-04-15T06:39:15.071775+00:00",
+  "updated_at": "2026-04-15T06:39:20.155338+00:00",
+  "scenes": [
+    {
+      "scene_id": "7eeadef6-b66a-4204-8eaa-0432883f87dd",
+      "order_index": 0,
+      "script_text": "안녕안녕",
+      "recommended_char_limit": 56,
+      "duration_sec": 1.0,
+      "version": 1,
+      "status": "generated",
+      "pronunciation_dict": {},
+      "subtitle_path": "data\\projects\\4d218052-d01a-4a9e-9f14-8958307fb5ee\\scene_000_v1\\subtitle.srt",
+      "tts_audio_path": "data\\projects\\4d218052-d01a-4a9e-9f14-8958307fb5ee\\scene_000_v1\\tts.wav",
+      "video_path": "data\\projects\\4d218052-d01a-4a9e-9f14-8958307fb5ee\\scene_000_v1\\scene.mp4",
+      "last_frame_path": "data\\projects\\4d218052-d01a-4a9e-9f14-8958307fb5ee\\scene_000_v1\\last_frame.png",
+      "subtitle_url": "/api/projects/4d218052-d01a-4a9e-9f14-8958307fb5ee/scenes/7eeadef6-b66a-4204-8eaa-0432883f87dd/subtitle",
+      "tts_audio_url": "/api/projects/4d218052-d01a-4a9e-9f14-8958307fb5ee/scenes/7eeadef6-b66a-4204-8eaa-0432883f87dd/audio",
+      "video_url": "/api/projects/4d218052-d01a-4a9e-9f14-8958307fb5ee/scenes/7eeadef6-b66a-4204-8eaa-0432883f87dd/video",
+      "last_frame_url": "/api/projects/4d218052-d01a-4a9e-9f14-8958307fb5ee/scenes/7eeadef6-b66a-4204-8eaa-0432883f87dd/last-frame"
+    }
+  ],
+  "final_video_path": null,
+  "final_video_url": null
+}
